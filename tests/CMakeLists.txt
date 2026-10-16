@@ -3,6 +3,9 @@ set(VLOGSIM_TESTS
     test_parser
     test_eval_adder
     test_eval_mux
+    test_seq_evaluator
+    test_vcd_writer
+    test_flattener
 )
 
 foreach(test_name ${VLOGSIM_TESTS})

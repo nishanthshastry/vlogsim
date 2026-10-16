@@ -13,15 +13,22 @@ public:
     explicit ParseError(const std::string& msg) : std::runtime_error(msg) {}
 };
 
-// Recursive-descent parser for the Milestone-1 combinational subset:
+// Recursive-descent parser for the Milestone-1/2 subset:
 // module/endmodule, input/output/wire/reg declarations with optional
-// [msb:lsb] ranges, and `assign` statements with C-like expression
-// precedence (matches Verilog operator precedence for the supported ops).
+// [msb:lsb] ranges, `assign` statements, and clocked `always` blocks with
+// blocking/non-blocking assignment and if/else — all with C-like
+// expression precedence (matches Verilog operator precedence for the
+// supported ops).
 class Parser {
 public:
     explicit Parser(std::vector<Token> tokens);
 
     Module parse_module();
+
+    // Parses every `module ... endmodule` in the token stream (Milestone 3:
+    // multi-module files / hierarchy). Throws ParseError on a duplicate
+    // module name.
+    Design parse_design();
 
 private:
     const Token& peek(int offset = 0) const;
@@ -35,6 +42,14 @@ private:
     void parse_port_decl(Module& module, PortDirection dir);
     void parse_net_decl(Module& module, bool is_reg);
     void parse_assign(Module& module);
+    void parse_always(Module& module);
+    void parse_param_decl(Module& module);
+    void parse_instance(Module& module);
+
+    StmtPtr parse_statement();
+    StmtPtr parse_block();          // begin ... end
+    StmtPtr parse_if();
+    StmtPtr parse_assignment_stmt(); // ident (= | <=) expr ;
 
     ExprPtr parse_expr();          // entry point: ternary
     ExprPtr parse_ternary();

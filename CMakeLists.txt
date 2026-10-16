@@ -16,6 +16,9 @@ add_library(vlogsim_core
     src/parser.cpp
     src/elaborator.cpp
     src/comb_evaluator.cpp
+    src/seq_evaluator.cpp
+    src/vcd_writer.cpp
+    src/flattener.cpp
 )
 target_include_directories(vlogsim_core PUBLIC include)
 target_compile_options(vlogsim_core PRIVATE -Wall -Wextra)

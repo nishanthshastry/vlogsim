@@ -6,18 +6,38 @@ simulation engines (event-driven interpreter, levelized evaluator, and
 generated-C++ execution), validated against Icarus Verilog as the golden
 reference.
 
-This repo currently implements **Milestone 1** of the roadmap below:
-lexer, parser, elaborator, and a combinational `assign` evaluator, with
-unit tests on an adder and a mux.
+This repo currently implements **Milestones 1 through 3** of the roadmap
+below: lexer, parser, elaborator, a combinational `assign` evaluator,
+clocked `always` blocks with non-blocking assignment and a VCD writer,
+and now module instantiation with parameters, flattened to a single
+module before elaboration — validated with unit tests on an adder, a
+mux, a D flip-flop with synchronous reset, a wraparound counter, and a
+hierarchical 2-bit shift register built from two instantiated D flip-flops.
 
 ## Scope (Verilog subset)
 
-Modules and ports, `wire`/`reg`, continuous `assign`, `always @(posedge
-clk)` and `always @*`, blocking/non-blocking assignment, `if`/`case`,
-arithmetic/bitwise/logical/shift/reduction operators, parameters, and
-hierarchy through module instantiation. Milestone 1 covers the
-combinational slice of this: modules, ports, wire/reg declarations, and
-`assign` with full expression precedence (no bit-select or hierarchy yet).
+Modules and ports, `wire`/`reg`, continuous `assign`, `always
+@(posedge/negedge ...)` with `if`/`else` and `begin`/`end` blocks,
+blocking (`=`) and non-blocking (`<=`) assignment,
+arithmetic/bitwise/logical/shift/reduction operators, `parameter`
+declarations with per-instance `#(.NAME(value))` overrides, and module
+instantiation (named `.port(expr)` or positional connections) across
+multiple modules in one file. `case` and bit-select remain for later
+milestones.
+
+Milestone 1 covers the combinational slice (modules, ports, wire/reg
+declarations, `assign` with full expression precedence). Milestone 2
+adds clocked `always` blocks: edge-sensitive triggering, blocking vs.
+non-blocking assignment semantics (two-phase sample-then-commit, per the
+proposal's kernel sketch), and VCD output. Milestone 3 adds hierarchy:
+`Flattener` inlines every instantiated submodule into the top module —
+renaming nets with an `<instance>__` prefix, bridging port connections
+with continuous assigns, and constant-folding parameters away entirely —
+so `Elaborator` and both evaluators need no hierarchy-awareness at all.
+Always-block bodies can reference continuous-assign-driven wires when
+resolving a sensitivity edge (needed for clock/reset pass-through after
+flattening) but not yet in general statement bodies; `always @*`, `case`,
+and bit-select remain for later milestones.
 
 ## Build & test
 
@@ -33,15 +53,23 @@ widths):
 
 ```bash
 ./vlogsim_cli ../examples/mux2to1.v
+./vlogsim_cli ../examples/counter.v
+./vlogsim_cli ../examples/shiftreg2.v   # hierarchical: two instantiated dff modules
 ```
+
+The CLI parses every module in the file and infers the top module as the
+one definition nothing else instantiates (pass a single-module file to
+sidestep the inference entirely).
 
 ## Roadmap
 
 1. **Combinational subset** — lexer, parser, elaborator, `assign`
-   evaluation; unit tests on adders and multiplexers. *(this repo, so far)*
-2. Sequential logic — clocked `always` blocks, non-blocking assignment,
-   reset, VCD output.
-3. Hierarchy and parameters — module instantiation and flattening.
+   evaluation; unit tests on adders and multiplexers. *(done)*
+2. **Sequential logic** — clocked `always` blocks, non-blocking
+   assignment, reset, VCD output. *(done — see `SeqEvaluator` and
+   `VcdWriter`)*
+3. **Hierarchy and parameters** — module instantiation and flattening.
+   *(done — see `Flattener`)*
 4. Four-state logic — X propagation and pessimism tests.
 5. Testbench support — `initial` blocks, delays, `$display`, `$finish`.
 6. Performance — levelized engine, then C++ code generation, benchmarked

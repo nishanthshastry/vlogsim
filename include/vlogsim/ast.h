@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace vlogsim {
@@ -83,12 +85,78 @@ struct ContinuousAssign {
     ExprPtr rhs;
 };
 
+// --- Statements (Milestone 2: clocked always blocks) ---
+
+struct Stmt {
+    virtual ~Stmt() = default;
+};
+using StmtPtr = std::unique_ptr<Stmt>;
+
+struct BlockingAssignStmt : Stmt {
+    std::string target;
+    ExprPtr rhs;
+    BlockingAssignStmt(std::string t, ExprPtr r) : target(std::move(t)), rhs(std::move(r)) {}
+};
+
+struct NonBlockingAssignStmt : Stmt {
+    std::string target;
+    ExprPtr rhs;
+    NonBlockingAssignStmt(std::string t, ExprPtr r) : target(std::move(t)), rhs(std::move(r)) {}
+};
+
+struct BlockStmt : Stmt {
+    std::vector<StmtPtr> statements; // begin ... end
+    explicit BlockStmt(std::vector<StmtPtr> s) : statements(std::move(s)) {}
+};
+
+struct IfStmt : Stmt {
+    ExprPtr cond;
+    StmtPtr then_branch;
+    StmtPtr else_branch; // nullptr if no else
+    IfStmt(ExprPtr c, StmtPtr t, StmtPtr e) : cond(std::move(c)), then_branch(std::move(t)), else_branch(std::move(e)) {}
+};
+
+enum class EdgeKind { Posedge, Negedge };
+
+struct SensitivityItem {
+    EdgeKind edge;
+    std::string net;
+};
+
+struct AlwaysBlock {
+    std::vector<SensitivityItem> sensitivity; // e.g. posedge clk [or negedge rst_n]
+    StmtPtr body;
+};
+
+// --- Hierarchy (Milestone 3: module instantiation and parameters) ---
+
+struct ParamDecl {
+    std::string name;
+    ExprPtr default_value; // constant expression, may reference earlier params in the same module
+};
+
+struct ModuleInstance {
+    std::string module_type;
+    std::string instance_name;
+    std::vector<std::pair<std::string, ExprPtr>> param_overrides; // #(.NAME(expr), ...)
+
+    // Exactly one of these is populated, depending on connection style.
+    std::vector<std::pair<std::string, ExprPtr>> named_connections; // .port(expr)
+    std::vector<ExprPtr> positional_connections;                    // (expr1, expr2, ...)
+};
+
 struct Module {
     std::string name;
     std::vector<Port> ports;
     std::vector<NetDecl> wires;
     std::vector<NetDecl> regs;
     std::vector<ContinuousAssign> assigns;
+    std::vector<AlwaysBlock> always_blocks;
+    std::vector<ParamDecl> params;
+    std::vector<ModuleInstance> instances;
 };
+
+// A parsed source file: every module definition it contains, keyed by name.
+using Design = std::unordered_map<std::string, Module>;
 
 } // namespace vlogsim

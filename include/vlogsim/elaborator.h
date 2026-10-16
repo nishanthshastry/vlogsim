@@ -46,6 +46,7 @@ public:
 
 private:
     void check_expr(const Expr* e, const ElaboratedModule& em);
+    void check_stmt(const Stmt* s, const ElaboratedModule& em);
 };
 
 } // namespace vlogsim

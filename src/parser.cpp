@@ -142,6 +142,78 @@ void Parser::parse_assign(Module& module) {
     module.assigns.push_back(ContinuousAssign{target.text, std::move(rhs)});
 }
 
+void Parser::parse_always(Module& module) {
+    expect(TokenType::At, "after 'always'");
+    expect(TokenType::LParen, "to start sensitivity list");
+
+    AlwaysBlock block;
+    for (;;) {
+        EdgeKind edge;
+        if (match(TokenType::KwPosedge)) edge = EdgeKind::Posedge;
+        else if (match(TokenType::KwNegedge)) edge = EdgeKind::Negedge;
+        else error("expected 'posedge' or 'negedge' in sensitivity list, found '" + peek().text + "'");
+
+        Token net = expect(TokenType::Identifier, "in sensitivity list");
+        block.sensitivity.push_back(SensitivityItem{edge, net.text});
+
+        if (check(TokenType::Identifier) && peek().text == "or") {
+            advance();
+            continue;
+        }
+        if (match(TokenType::Comma)) continue;
+        break;
+    }
+    expect(TokenType::RParen, "closing sensitivity list");
+
+    block.body = parse_statement();
+    module.always_blocks.push_back(std::move(block));
+}
+
+StmtPtr Parser::parse_statement() {
+    if (check(TokenType::KwBegin)) return parse_block();
+    if (check(TokenType::KwIf)) return parse_if();
+    return parse_assignment_stmt();
+}
+
+StmtPtr Parser::parse_block() {
+    expect(TokenType::KwBegin, "at start of block");
+    std::vector<StmtPtr> statements;
+    while (!check(TokenType::KwEnd)) {
+        if (check(TokenType::EndOfFile)) error("unexpected end of file inside begin/end block");
+        statements.push_back(parse_statement());
+    }
+    expect(TokenType::KwEnd, "to close begin/end block");
+    return std::make_unique<BlockStmt>(std::move(statements));
+}
+
+StmtPtr Parser::parse_if() {
+    expect(TokenType::KwIf, "at start of if statement");
+    expect(TokenType::LParen, "after 'if'");
+    ExprPtr cond = parse_expr();
+    expect(TokenType::RParen, "after if condition");
+    StmtPtr then_branch = parse_statement();
+    StmtPtr else_branch;
+    if (match(TokenType::KwElse)) {
+        else_branch = parse_statement();
+    }
+    return std::make_unique<IfStmt>(std::move(cond), std::move(then_branch), std::move(else_branch));
+}
+
+StmtPtr Parser::parse_assignment_stmt() {
+    Token target = expect(TokenType::Identifier, "assignment target");
+    bool non_blocking;
+    if (match(TokenType::Le)) {
+        non_blocking = true; // '<=' in statement position is non-blocking assignment
+    } else {
+        expect(TokenType::Assign, "expected '=' or '<=' in assignment");
+        non_blocking = false;
+    }
+    ExprPtr rhs = parse_expr();
+    expect(TokenType::Semicolon, "after statement");
+    if (non_blocking) return std::make_unique<NonBlockingAssignStmt>(target.text, std::move(rhs));
+    return std::make_unique<BlockingAssignStmt>(target.text, std::move(rhs));
+}
+
 Module Parser::parse_module() {
     Module module;
     expect(TokenType::KwModule, "at start of file");
@@ -200,12 +272,94 @@ Module Parser::parse_module() {
             parse_net_decl(module, /*is_reg=*/true);
         } else if (match(TokenType::KwAssign)) {
             parse_assign(module);
+        } else if (match(TokenType::KwAlways)) {
+            parse_always(module);
+        } else if (match(TokenType::KwParameter)) {
+            parse_param_decl(module);
+        } else if (check(TokenType::Identifier)) {
+            // Nothing else in this grammar starts a module-body item with a
+            // bare identifier, so this unambiguously begins a module
+            // instantiation: <module_type> [#(...)] <instance_name> (...);
+            parse_instance(module);
         } else {
             error("unexpected token '" + peek().text + "' in module body");
         }
     }
     expect(TokenType::KwEndmodule, "to close module");
     return module;
+}
+
+Design Parser::parse_design() {
+    Design design;
+    while (!check(TokenType::EndOfFile)) {
+        Module module = parse_module();
+        if (design.count(module.name)) {
+            throw ParseError("module '" + module.name + "' is defined more than once");
+        }
+        design.emplace(module.name, std::move(module));
+    }
+    return design;
+}
+
+void Parser::parse_param_decl(Module& module) {
+    for (;;) {
+        Token name = expect(TokenType::Identifier, "parameter name");
+        expect(TokenType::Assign, "after parameter name");
+        ExprPtr value = parse_expr();
+        module.params.push_back(ParamDecl{name.text, std::move(value)});
+        if (!match(TokenType::Comma)) break;
+    }
+    expect(TokenType::Semicolon, "after parameter declaration");
+}
+
+void Parser::parse_instance(Module& module) {
+    Token module_type = expect(TokenType::Identifier, "module type in instantiation");
+
+    ModuleInstance inst;
+    inst.module_type = module_type.text;
+
+    if (match(TokenType::Hash)) {
+        expect(TokenType::LParen, "after '#' in parameterized instantiation");
+        if (!check(TokenType::RParen)) {
+            for (;;) {
+                expect(TokenType::Dot, "expected '.' in parameter override");
+                Token pname = expect(TokenType::Identifier, "parameter name");
+                expect(TokenType::LParen, "after parameter name");
+                ExprPtr pexpr = parse_expr();
+                expect(TokenType::RParen, "closing parameter override value");
+                inst.param_overrides.emplace_back(pname.text, std::move(pexpr));
+                if (!match(TokenType::Comma)) break;
+            }
+        }
+        expect(TokenType::RParen, "closing parameter override list");
+    }
+
+    Token inst_name = expect(TokenType::Identifier, "instance name");
+    inst.instance_name = inst_name.text;
+
+    expect(TokenType::LParen, "to start port connection list");
+    if (!check(TokenType::RParen)) {
+        if (check(TokenType::Dot)) {
+            for (;;) {
+                expect(TokenType::Dot, "expected '.' in port connection");
+                Token pname = expect(TokenType::Identifier, "port name");
+                expect(TokenType::LParen, "after port name");
+                ExprPtr pexpr = parse_expr();
+                expect(TokenType::RParen, "closing port connection");
+                inst.named_connections.emplace_back(pname.text, std::move(pexpr));
+                if (!match(TokenType::Comma)) break;
+            }
+        } else {
+            for (;;) {
+                inst.positional_connections.push_back(parse_expr());
+                if (!match(TokenType::Comma)) break;
+            }
+        }
+    }
+    expect(TokenType::RParen, "closing port connection list");
+    expect(TokenType::Semicolon, "after instantiation");
+
+    module.instances.push_back(std::move(inst));
 }
 
 // --- Expression grammar (highest to lowest precedence in the call chain) ---

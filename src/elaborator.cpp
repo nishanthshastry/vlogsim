@@ -50,7 +50,32 @@ ElaboratedModule Elaborator::elaborate(const Module& module) {
         check_expr(a.rhs.get(), em);
     }
 
+    for (const AlwaysBlock& block : module.always_blocks) {
+        for (const SensitivityItem& item : block.sensitivity) {
+            if (!em.has_net(item.net)) {
+                throw ElaborationError("sensitivity net '" + item.net + "' is not a declared net");
+            }
+        }
+        check_stmt(block.body.get(), em);
+    }
+
     return em;
+}
+
+void Elaborator::check_stmt(const Stmt* s, const ElaboratedModule& em) {
+    if (auto* blk = dynamic_cast<const BlockStmt*>(s)) {
+        for (const StmtPtr& inner : blk->statements) check_stmt(inner.get(), em);
+    } else if (auto* ba = dynamic_cast<const BlockingAssignStmt*>(s)) {
+        if (!em.has_net(ba->target)) throw ElaborationError("assignment target '" + ba->target + "' is not a declared net");
+        check_expr(ba->rhs.get(), em);
+    } else if (auto* nba = dynamic_cast<const NonBlockingAssignStmt*>(s)) {
+        if (!em.has_net(nba->target)) throw ElaborationError("assignment target '" + nba->target + "' is not a declared net");
+        check_expr(nba->rhs.get(), em);
+    } else if (auto* ifs = dynamic_cast<const IfStmt*>(s)) {
+        check_expr(ifs->cond.get(), em);
+        check_stmt(ifs->then_branch.get(), em);
+        if (ifs->else_branch) check_stmt(ifs->else_branch.get(), em);
+    }
 }
 
 void Elaborator::check_expr(const Expr* e, const ElaboratedModule& em) {
