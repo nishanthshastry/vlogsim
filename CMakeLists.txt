@@ -19,6 +19,7 @@ add_library(vlogsim_core
     src/seq_evaluator.cpp
     src/vcd_writer.cpp
     src/flattener.cpp
+    src/four_state_evaluator.cpp
 )
 target_include_directories(vlogsim_core PUBLIC include)
 target_compile_options(vlogsim_core PRIVATE -Wall -Wextra)

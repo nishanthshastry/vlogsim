@@ -2,18 +2,27 @@
 
 #include <cctype>
 
+#include "vlogsim/value.h"
+
 namespace vlogsim {
 
 namespace {
 
+struct ParsedNumber {
+    int width;
+    uint64_t value;
+    uint64_t unknown; // Milestone 4: bits that were 'x'/'z' in the source text
+};
+
 // Parses a Verilog numeric literal such as "42", "8'hFF", "4'b1010",
-// "3'd5", "'o17". Returns {width, value}; width is -1 when unsized.
-std::pair<int, uint64_t> parse_number_literal(const std::string& text) {
+// "3'd5", "4'bxx01", "8'hzz". width is -1 when unsized. 'z' digits are
+// treated identically to 'x' (see value.h on why).
+ParsedNumber parse_number_literal(const std::string& text) {
     size_t tick = text.find('\'');
     if (tick == std::string::npos) {
         // Plain decimal, unsized.
         uint64_t value = text.empty() ? 0 : std::stoull(text);
-        return {-1, value};
+        return {-1, value, 0};
     }
 
     std::string size_part = text.substr(0, tick);
@@ -32,28 +41,49 @@ std::pair<int, uint64_t> parse_number_literal(const std::string& text) {
         if (text[i] != '_') digits.push_back(text[i]);
     }
 
-    int radix = 10;
-    switch (base) {
-        case 'b': radix = 2; break;
-        case 'o': radix = 8; break;
-        case 'd': radix = 10; break;
-        case 'h': radix = 16; break;
-        default: radix = 10; break;
+    if (base == 'd') {
+        // Decimal only supports a whole-literal x/z (e.g. "8'dx"), not a
+        // per-digit one — matching the Verilog grammar, where a decimal
+        // number is a single token, not a digit string with independent
+        // unknown digits like binary/octal/hex.
+        if (digits.size() == 1 && std::tolower(static_cast<unsigned char>(digits[0])) == 'x') {
+            return {width, 0, mask_for_width(width > 0 ? width : 64)};
+        }
+        if (digits.size() == 1 && std::tolower(static_cast<unsigned char>(digits[0])) == 'z') {
+            return {width, 0, mask_for_width(width > 0 ? width : 64)};
+        }
+        uint64_t value = digits.empty() ? 0 : std::stoull(digits, nullptr, 10);
+        return {width, value, 0};
     }
 
-    uint64_t value = 0;
-    if (!digits.empty()) {
-        // x/z digits are treated as 0 in this two-state Milestone-1 evaluator;
-        // four-state support arrives in the Milestone-4 upgrade.
-        std::string clean;
-        clean.reserve(digits.size());
-        for (char c : digits) {
-            if (c == 'x' || c == 'X' || c == 'z' || c == 'Z') clean.push_back('0');
-            else clean.push_back(c);
-        }
-        value = std::stoull(clean, nullptr, radix);
+    int radix = 10;
+    int bits_per_digit = 0;
+    switch (base) {
+        case 'b': radix = 2; bits_per_digit = 1; break;
+        case 'o': radix = 8; bits_per_digit = 3; break;
+        case 'h': radix = 16; bits_per_digit = 4; break;
+        default: radix = 10; bits_per_digit = 0; break;
     }
-    return {width, value};
+    (void)radix; // kept for clarity; digit values are computed directly below
+
+    uint64_t value = 0, unknown = 0;
+    int shift = 0;
+    for (auto it = digits.rbegin(); it != digits.rend(); ++it) {
+        char c = static_cast<char>(std::tolower(static_cast<unsigned char>(*it)));
+        uint64_t digit_value = 0, digit_unknown = 0;
+        uint64_t full_digit_mask = bits_per_digit >= 64 ? ~uint64_t{0} : ((uint64_t{1} << bits_per_digit) - 1);
+        if (c == 'x' || c == 'z') {
+            digit_unknown = full_digit_mask;
+        } else if (c >= '0' && c <= '9') {
+            digit_value = static_cast<uint64_t>(c - '0');
+        } else {
+            digit_value = static_cast<uint64_t>(c - 'a' + 10);
+        }
+        value |= (digit_value << shift);
+        unknown |= (digit_unknown << shift);
+        shift += bits_per_digit;
+    }
+    return {width, value, unknown};
 }
 
 } // namespace
@@ -98,10 +128,10 @@ void Parser::parse_range(int& msb, int& lsb) {
     lsb = 0;
     if (!match(TokenType::LBracket)) return;
     Token msb_tok = expect(TokenType::Number, "in range");
-    msb = static_cast<int>(parse_number_literal(msb_tok.text).second);
+    msb = static_cast<int>(parse_number_literal(msb_tok.text).value);
     expect(TokenType::Colon, "in range");
     Token lsb_tok = expect(TokenType::Number, "in range");
-    lsb = static_cast<int>(parse_number_literal(lsb_tok.text).second);
+    lsb = static_cast<int>(parse_number_literal(lsb_tok.text).value);
     expect(TokenType::RBracket, "closing range");
 }
 
@@ -533,8 +563,8 @@ ExprPtr Parser::parse_primary() {
     }
     if (check(TokenType::Number)) {
         Token t = advance();
-        auto [width, value] = parse_number_literal(t.text);
-        return std::make_unique<NumberExpr>(t.text, width, value);
+        ParsedNumber pn = parse_number_literal(t.text);
+        return std::make_unique<NumberExpr>(t.text, pn.width, pn.value, pn.unknown);
     }
     if (check(TokenType::Identifier)) {
         Token t = advance();

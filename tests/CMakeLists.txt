@@ -6,6 +6,8 @@ set(VLOGSIM_TESTS
     test_seq_evaluator
     test_vcd_writer
     test_flattener
+    test_four_state
+    test_four_state_evaluator
 )
 
 foreach(test_name ${VLOGSIM_TESTS})

@@ -69,7 +69,7 @@ void Flattener::add_net_if_absent(std::vector<NetDecl>& nets, const NetDecl& dec
 
 ExprPtr Flattener::clone_expr(const Expr* e) {
     if (auto* num = dynamic_cast<const NumberExpr*>(e)) {
-        return std::make_unique<NumberExpr>(num->text, num->width, num->value);
+        return std::make_unique<NumberExpr>(num->text, num->width, num->value, num->unknown);
     }
     if (auto* id = dynamic_cast<const IdentExpr*>(e)) {
         return std::make_unique<IdentExpr>(id->name);
@@ -96,7 +96,7 @@ ExprPtr Flattener::clone_expr(const Expr* e) {
 ExprPtr Flattener::rewrite_expr(const Expr* e, const std::string& prefix,
                                 const std::unordered_map<std::string, uint64_t>& param_values) const {
     if (auto* num = dynamic_cast<const NumberExpr*>(e)) {
-        return std::make_unique<NumberExpr>(num->text, num->width, num->value);
+        return std::make_unique<NumberExpr>(num->text, num->width, num->value, num->unknown);
     }
     if (auto* id = dynamic_cast<const IdentExpr*>(e)) {
         auto it = param_values.find(id->name);

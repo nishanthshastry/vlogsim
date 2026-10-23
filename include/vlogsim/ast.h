@@ -32,11 +32,13 @@ struct IdentExpr : Expr {
 };
 
 struct NumberExpr : Expr {
-    // Raw literal text, e.g. "8'hFF", "1010", "4'b1010".
+    // Raw literal text, e.g. "8'hFF", "1010", "4'b1010", "4'bxx01".
     std::string text;
     int width = -1;       // -1 means unsized (inferred)
-    uint64_t value = 0;   // parsed two-state value
-    explicit NumberExpr(std::string t, int w, uint64_t v) : text(std::move(t)), width(w), value(v) {}
+    uint64_t value = 0;   // bit value; meaningful only where `unknown` is 0
+    uint64_t unknown = 0; // Milestone 4: bits that are 'x'/'z' in the literal ('z' is treated as 'x' — see value.h)
+    explicit NumberExpr(std::string t, int w, uint64_t v, uint64_t u = 0)
+        : text(std::move(t)), width(w), value(v), unknown(u) {}
 };
 
 struct BinaryExpr : Expr {
