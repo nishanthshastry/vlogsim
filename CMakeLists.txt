@@ -20,6 +20,9 @@ add_library(vlogsim_core
     src/vcd_writer.cpp
     src/flattener.cpp
     src/four_state_evaluator.cpp
+    src/testbench_runner.cpp
+    src/levelized_evaluator.cpp
+    src/code_generator.cpp
 )
 target_include_directories(vlogsim_core PUBLIC include)
 target_compile_options(vlogsim_core PRIVATE -Wall -Wextra)
@@ -31,6 +34,10 @@ endif()
 
 add_executable(vlogsim_cli src/main.cpp)
 target_link_libraries(vlogsim_cli PRIVATE vlogsim_core)
+
+# Not registered with ctest: see src/bench_main.cpp for why.
+add_executable(vlogsim_bench src/bench_main.cpp)
+target_link_libraries(vlogsim_bench PRIVATE vlogsim_core)
 
 enable_testing()
 add_subdirectory(tests)

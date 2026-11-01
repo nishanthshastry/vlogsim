@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/lexer.h"
 #include "mini_test.h"
 
@@ -56,10 +59,33 @@ static void test_comments_and_whitespace_are_skipped() {
     CHECK(tokens[2].type == TokenType::EndOfFile);
 }
 
+static void test_system_task_identifiers() {
+    // Milestone 5: identifiers may start with '$' (system tasks/functions).
+    Lexer lexer("$display $finish $time");
+    auto tokens = lexer.tokenize();
+    CHECK_EQ(tokens.size(), 4u);
+    for (int i = 0; i < 3; ++i) CHECK(tokens[i].type == TokenType::Identifier);
+    CHECK_EQ(tokens[0].text, std::string("$display"));
+    CHECK_EQ(tokens[1].text, std::string("$finish"));
+    CHECK_EQ(tokens[2].text, std::string("$time"));
+}
+
+static void test_string_literal() {
+    Lexer lexer(R"("hello world" "line1\nline2" "quote:\"x\"")");
+    auto tokens = lexer.tokenize();
+    CHECK_EQ(tokens.size(), 4u);
+    for (int i = 0; i < 3; ++i) CHECK(tokens[i].type == TokenType::StringLiteral);
+    CHECK_EQ(tokens[0].text, std::string("hello world"));
+    CHECK_EQ(tokens[1].text, std::string("line1\nline2"));
+    CHECK_EQ(tokens[2].text, std::string("quote:\"x\""));
+}
+
 int main() {
     test_keywords_and_identifiers();
     test_operators();
     test_sized_number_literals();
     test_comments_and_whitespace_are_skipped();
+    test_system_task_identifiers();
+    test_string_literal();
     TEST_MAIN_RETURN();
 }

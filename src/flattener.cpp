@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/flattener.h"
 
 #include <algorithm>
@@ -99,6 +102,7 @@ ExprPtr Flattener::rewrite_expr(const Expr* e, const std::string& prefix,
         return std::make_unique<NumberExpr>(num->text, num->width, num->value, num->unknown);
     }
     if (auto* id = dynamic_cast<const IdentExpr*>(e)) {
+        if (id->name == "$time") return std::make_unique<IdentExpr>(id->name); // pseudo-identifier, never prefixed
         auto it = param_values.find(id->name);
         if (it != param_values.end()) {
             return std::make_unique<NumberExpr>(std::to_string(it->second), -1, it->second);
@@ -144,6 +148,19 @@ StmtPtr Flattener::rewrite_stmt(const Stmt* s, const std::string& prefix,
         return std::make_unique<IfStmt>(rewrite_expr(ifs->cond.get(), prefix, param_values),
                                         rewrite_stmt(ifs->then_branch.get(), prefix, param_values),
                                         ifs->else_branch ? rewrite_stmt(ifs->else_branch.get(), prefix, param_values) : nullptr);
+    }
+    if (auto* delay = dynamic_cast<const DelayStmt*>(s)) {
+        return std::make_unique<DelayStmt>(delay->delay,
+                                           delay->stmt ? rewrite_stmt(delay->stmt.get(), prefix, param_values) : nullptr);
+    }
+    if (auto* disp = dynamic_cast<const DisplayStmt*>(s)) {
+        std::vector<ExprPtr> args;
+        args.reserve(disp->args.size());
+        for (const ExprPtr& arg : disp->args) args.push_back(rewrite_expr(arg.get(), prefix, param_values));
+        return std::make_unique<DisplayStmt>(disp->format, std::move(args));
+    }
+    if (dynamic_cast<const FinishStmt*>(s)) {
+        return std::make_unique<FinishStmt>();
     }
     throw FlattenError("unsupported statement node during flattening");
 }
@@ -198,6 +215,12 @@ void Flattener::flatten_into(Module& out, const Module& mod, const std::string& 
         }
         new_block.body = rewrite_stmt(block.body.get(), prefix, param_values);
         out.always_blocks.push_back(std::move(new_block));
+    }
+
+    for (const InitialBlock& block : mod.initial_blocks) {
+        InitialBlock new_block;
+        new_block.body = rewrite_stmt(block.body.get(), prefix, param_values);
+        out.initial_blocks.push_back(std::move(new_block));
     }
 
     for (const ModuleInstance& inst : mod.instances) {

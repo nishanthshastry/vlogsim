@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <string>
@@ -8,6 +11,7 @@ enum class TokenType {
     // literals / identifiers
     Identifier,
     Number,
+    StringLiteral, // "..." — Milestone 5: $display format strings
 
     // keywords
     KwModule,

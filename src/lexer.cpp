@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/lexer.h"
 
 #include <cctype>
@@ -117,14 +120,41 @@ Token Lexer::lex_number() {
     return make_token(TokenType::Number, text);
 }
 
+Token Lexer::lex_string() {
+    // Consumes the opening '"', the contents (with minimal \\" and \\n
+    // escape handling — enough for $display format strings), and the
+    // closing '"'. Token.text holds the unescaped contents, not the
+    // surrounding quotes.
+    advance(); // opening quote
+    std::string text;
+    while (peek() != '"' && peek() != '\0') {
+        char c = advance();
+        if (c == '\\' && peek() != '\0') {
+            char esc = advance();
+            switch (esc) {
+                case 'n': text.push_back('\n'); break;
+                case 't': text.push_back('\t'); break;
+                case '"': text.push_back('"'); break;
+                case '\\': text.push_back('\\'); break;
+                default: text.push_back(esc); break;
+            }
+        } else {
+            text.push_back(c);
+        }
+    }
+    if (peek() == '"') advance(); // closing quote (silently unterminated otherwise — caught downstream by the parser expecting content it won't find)
+    return make_token(TokenType::StringLiteral, text);
+}
+
 Token Lexer::next_token() {
     skip_whitespace_and_comments();
     if (pos_ >= source_.size()) return make_token(TokenType::EndOfFile, "");
 
     char c = peek();
 
-    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') return lex_identifier_or_keyword();
+    if (std::isalpha(static_cast<unsigned char>(c)) || c == '_' || c == '$') return lex_identifier_or_keyword();
     if (std::isdigit(static_cast<unsigned char>(c))) return lex_number();
+    if (c == '"') return lex_string();
 
     advance();
     switch (c) {

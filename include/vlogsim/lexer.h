@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <string>
@@ -27,6 +30,7 @@ private:
     Token make_token(TokenType type, const std::string& text);
     Token lex_identifier_or_keyword();
     Token lex_number();
+    Token lex_string();
 
     std::string source_;
     size_t pos_ = 0;

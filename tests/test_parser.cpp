@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/lexer.h"
 #include "vlogsim/parser.h"
 #include "mini_test.h"
@@ -90,11 +93,62 @@ static void test_parse_error_on_bad_syntax() {
     CHECK(threw);
 }
 
+static void test_initial_block_with_delay_display_finish() {
+    Module m = parse(R"(
+        module tb;
+            reg [3:0] x;
+            initial begin
+                x = 1;
+                #10 x = 2;
+                $display("x=%d", x);
+                $finish;
+            end
+        endmodule
+    )");
+    CHECK_EQ(m.initial_blocks.size(), 1u);
+    auto* blk = dynamic_cast<BlockStmt*>(m.initial_blocks[0].body.get());
+    CHECK(blk != nullptr);
+    CHECK_EQ(blk->statements.size(), 4u);
+
+    CHECK(dynamic_cast<BlockingAssignStmt*>(blk->statements[0].get()) != nullptr);
+
+    auto* delay = dynamic_cast<DelayStmt*>(blk->statements[1].get());
+    CHECK(delay != nullptr);
+    CHECK_EQ(delay->delay, 10);
+    CHECK(dynamic_cast<BlockingAssignStmt*>(delay->stmt.get()) != nullptr);
+
+    auto* disp = dynamic_cast<DisplayStmt*>(blk->statements[2].get());
+    CHECK(disp != nullptr);
+    CHECK_EQ(disp->format, std::string("x=%d"));
+    CHECK_EQ(disp->args.size(), 1u);
+
+    CHECK(dynamic_cast<FinishStmt*>(blk->statements[3].get()) != nullptr);
+}
+
+static void test_bare_delay_statement_has_no_inner_stmt() {
+    Module m = parse(R"(
+        module tb;
+            reg x;
+            initial begin
+                #5;
+                x = 1;
+            end
+        endmodule
+    )");
+    auto* blk = dynamic_cast<BlockStmt*>(m.initial_blocks[0].body.get());
+    auto* delay = dynamic_cast<DelayStmt*>(blk->statements[0].get());
+    CHECK(delay != nullptr);
+    CHECK_EQ(delay->delay, 5);
+    CHECK(delay->stmt == nullptr);
+}
+
 int main() {
     test_ports_and_widths();
     test_module_header_port_list_is_skipped();
     test_assign_expression_tree();
     test_operator_precedence();
     test_parse_error_on_bad_syntax();
+    test_initial_block_with_delay_display_finish();
+    test_bare_delay_statement_has_no_inner_stmt();
     TEST_MAIN_RETURN();
 }

@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/parser.h"
 
 #include <cctype>
@@ -172,6 +175,12 @@ void Parser::parse_assign(Module& module) {
     module.assigns.push_back(ContinuousAssign{target.text, std::move(rhs)});
 }
 
+void Parser::parse_initial(Module& module) {
+    InitialBlock block;
+    block.body = parse_statement();
+    module.initial_blocks.push_back(std::move(block));
+}
+
 void Parser::parse_always(Module& module) {
     expect(TokenType::At, "after 'always'");
     expect(TokenType::LParen, "to start sensitivity list");
@@ -202,7 +211,44 @@ void Parser::parse_always(Module& module) {
 StmtPtr Parser::parse_statement() {
     if (check(TokenType::KwBegin)) return parse_block();
     if (check(TokenType::KwIf)) return parse_if();
+    if (check(TokenType::Hash)) return parse_delay_stmt();
+    if (check(TokenType::Identifier) && peek().text == "$display") return parse_display_stmt();
+    if (check(TokenType::Identifier) && peek().text == "$finish") return parse_finish_stmt();
     return parse_assignment_stmt();
+}
+
+StmtPtr Parser::parse_delay_stmt() {
+    expect(TokenType::Hash, "at start of delay statement");
+    Token num = expect(TokenType::Number, "delay amount after '#'");
+    int delay = num.text.empty() ? 0 : std::stoi(num.text);
+    if (match(TokenType::Semicolon)) {
+        return std::make_unique<DelayStmt>(delay, nullptr);
+    }
+    StmtPtr following = parse_statement();
+    return std::make_unique<DelayStmt>(delay, std::move(following));
+}
+
+StmtPtr Parser::parse_display_stmt() {
+    expect(TokenType::Identifier, "'$display'"); // consumes "$display" itself
+    expect(TokenType::LParen, "after '$display'");
+    Token fmt = expect(TokenType::StringLiteral, "format string in $display");
+    std::vector<ExprPtr> args;
+    while (match(TokenType::Comma)) {
+        args.push_back(parse_expr());
+    }
+    expect(TokenType::RParen, "closing '$display' argument list");
+    expect(TokenType::Semicolon, "after $display statement");
+    return std::make_unique<DisplayStmt>(fmt.text, std::move(args));
+}
+
+StmtPtr Parser::parse_finish_stmt() {
+    expect(TokenType::Identifier, "'$finish'"); // consumes "$finish" itself
+    if (match(TokenType::LParen)) {
+        if (!check(TokenType::RParen)) parse_expr(); // optional diagnostic-level argument, discarded
+        expect(TokenType::RParen, "closing '$finish' argument list");
+    }
+    expect(TokenType::Semicolon, "after $finish statement");
+    return std::make_unique<FinishStmt>();
 }
 
 StmtPtr Parser::parse_block() {
@@ -306,6 +352,8 @@ Module Parser::parse_module() {
             parse_always(module);
         } else if (match(TokenType::KwParameter)) {
             parse_param_decl(module);
+        } else if (match(TokenType::KwInitial)) {
+            parse_initial(module);
         } else if (check(TokenType::Identifier)) {
             // Nothing else in this grammar starts a module-body item with a
             // bare identifier, so this unambiguously begins a module

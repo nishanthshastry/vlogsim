@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <memory>
@@ -130,6 +133,26 @@ struct AlwaysBlock {
     StmtPtr body;
 };
 
+// --- Testbench support (Milestone 5) ---
+
+struct DelayStmt : Stmt {
+    int delay = 0;
+    StmtPtr stmt; // nullptr for a bare "#N;"; otherwise the statement that follows the delay, e.g. "#10 a = 1;"
+    DelayStmt(int d, StmtPtr s) : delay(d), stmt(std::move(s)) {}
+};
+
+struct DisplayStmt : Stmt {
+    std::string format;
+    std::vector<ExprPtr> args;
+    DisplayStmt(std::string f, std::vector<ExprPtr> a) : format(std::move(f)), args(std::move(a)) {}
+};
+
+struct FinishStmt : Stmt {};
+
+struct InitialBlock {
+    StmtPtr body;
+};
+
 // --- Hierarchy (Milestone 3: module instantiation and parameters) ---
 
 struct ParamDecl {
@@ -154,6 +177,7 @@ struct Module {
     std::vector<NetDecl> regs;
     std::vector<ContinuousAssign> assigns;
     std::vector<AlwaysBlock> always_blocks;
+    std::vector<InitialBlock> initial_blocks;
     std::vector<ParamDecl> params;
     std::vector<ModuleInstance> instances;
 };

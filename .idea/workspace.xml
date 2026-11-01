@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="6b83dc8a-74ee-48d8-8003-85dd78ea8070" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/vlogsim/ast.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/vlogsim/ast.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/vlogsim/lexer.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/vlogsim/lexer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/vlogsim/parser.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/vlogsim/parser.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/vlogsim/token.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/vlogsim/token.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/elaborator.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/elaborator.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/flattener.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/flattener.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lexer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/lexer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/parser.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/parser.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/token.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/token.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/tests/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_lexer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_lexer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_parser.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_parser.cpp" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "nishanthshastry"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/nishanthshastry/vlogsim.git",
+    "accountId": "78e4aaae-26d8-400c-97d4-c2d6d892e2e0"
+  }
+}]]></component>
+  <component name="ProjectCodeStyleSettingsMigration">
+    <option name="version" value="2" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 2
+}]]></component>
+  <component name="ProjectId" id="3LFKSEuSSCxpqb8qou6dBubZv71" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/nishanthshastry/own_projects/c++Projects/vlogsim"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="6b83dc8a-74ee-48d8-8003-85dd78ea8070" name="Changes" comment="" />
+      <created>1793044374364</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1793044374364</updated>
+    </task>
+    <servers />
+  </component>
+</project>

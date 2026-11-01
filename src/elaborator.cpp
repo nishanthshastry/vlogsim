@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/elaborator.h"
 
 namespace vlogsim {
@@ -59,6 +62,10 @@ ElaboratedModule Elaborator::elaborate(const Module& module) {
         check_stmt(block.body.get(), em);
     }
 
+    for (const InitialBlock& block : module.initial_blocks) {
+        check_stmt(block.body.get(), em);
+    }
+
     return em;
 }
 
@@ -75,11 +82,17 @@ void Elaborator::check_stmt(const Stmt* s, const ElaboratedModule& em) {
         check_expr(ifs->cond.get(), em);
         check_stmt(ifs->then_branch.get(), em);
         if (ifs->else_branch) check_stmt(ifs->else_branch.get(), em);
+    } else if (auto* delay = dynamic_cast<const DelayStmt*>(s)) {
+        if (delay->stmt) check_stmt(delay->stmt.get(), em);
+    } else if (auto* disp = dynamic_cast<const DisplayStmt*>(s)) {
+        for (const ExprPtr& arg : disp->args) check_expr(arg.get(), em);
     }
+    // FinishStmt needs no validation.
 }
 
 void Elaborator::check_expr(const Expr* e, const ElaboratedModule& em) {
     if (auto* id = dynamic_cast<const IdentExpr*>(e)) {
+        if (id->name == "$time") return; // pseudo-identifier (Milestone 5), not a declared net
         if (!em.has_net(id->name)) {
             throw ElaborationError("identifier '" + id->name + "' is not a declared net");
         }

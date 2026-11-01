@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/token.h"
 
 namespace vlogsim {
@@ -6,6 +9,7 @@ const char* token_type_name(TokenType t) {
     switch (t) {
         case TokenType::Identifier: return "Identifier";
         case TokenType::Number: return "Number";
+        case TokenType::StringLiteral: return "StringLiteral";
         case TokenType::KwModule: return "module";
         case TokenType::KwEndmodule: return "endmodule";
         case TokenType::KwInput: return "input";

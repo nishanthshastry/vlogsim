@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -8,6 +11,7 @@
 #include "vlogsim/flattener.h"
 #include "vlogsim/lexer.h"
 #include "vlogsim/parser.h"
+#include "vlogsim/testbench_runner.h"
 
 namespace {
 std::string read_file(const std::string& path) {
@@ -46,12 +50,11 @@ std::string find_top_module(const vlogsim::Design& design) {
 }
 } // namespace
 
-// CLI covering Milestones 1-3: parses every module in the file, flattens
+// CLI covering Milestones 1-5: parses every module in the file, flattens
 // hierarchy (module instantiation + parameters) down to the inferred top
-// module, elaborates it, and prints its port list and net widths.
-// Stimulus-driven evaluation is exercised directly by the unit tests for
-// now; a real testbench front end (initial blocks, $display) arrives in
-// Milestone 5.
+// module, elaborates it, and prints its port list and net widths. If the
+// top module has `initial` blocks (a testbench), runs them via
+// TestbenchRunner and prints $display output plus the final state.
 int main(int argc, char** argv) {
     if (argc != 2) {
         std::cerr << "usage: " << argv[0] << " <file.v>\n";
@@ -74,6 +77,14 @@ int main(int argc, char** argv) {
         for (const auto& [name, info] : em.nets()) {
             std::cout << "  " << name << " : width=" << info.width
                        << (info.is_input ? " input" : (info.is_output ? " output" : " internal")) << "\n";
+        }
+
+        if (!em.source().initial_blocks.empty()) {
+            std::cout << "\nrunning testbench...\n";
+            vlogsim::TestbenchRunner tb(em, std::cout);
+            tb.run();
+            std::cout << "simulation " << (tb.finished() ? "finished" : "ran to completion with no $finish")
+                       << " at time " << tb.time() << "\n";
         }
     } catch (const std::exception& e) {
         std::cerr << "error: " << e.what() << "\n";

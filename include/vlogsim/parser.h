@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <stdexcept>
@@ -45,11 +48,15 @@ private:
     void parse_always(Module& module);
     void parse_param_decl(Module& module);
     void parse_instance(Module& module);
+    void parse_initial(Module& module);
 
     StmtPtr parse_statement();
     StmtPtr parse_block();          // begin ... end
     StmtPtr parse_if();
     StmtPtr parse_assignment_stmt(); // ident (= | <=) expr ;
+    StmtPtr parse_delay_stmt();      // #N [stmt]
+    StmtPtr parse_display_stmt();    // $display("...", args...);
+    StmtPtr parse_finish_stmt();     // $finish[(...)];
 
     ExprPtr parse_expr();          // entry point: ternary
     ExprPtr parse_ternary();
