@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/four_state_evaluator.h"
 
 #include <algorithm>

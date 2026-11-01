@@ -1,3 +1,6 @@
+// Copyright 2026 Nishanth Shastry
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vlogsim/elaborator.h"
 #include "vlogsim/four_state_evaluator.h"
 #include "vlogsim/lexer.h"
